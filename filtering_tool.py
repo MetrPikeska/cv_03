@@ -22,6 +22,13 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 import seaborn as sns
 
+try:
+    import contextily as ctx
+    CONTEXTILY_AVAILABLE = True
+except ImportError:
+    CONTEXTILY_AVAILABLE = False
+    print("[!] contextily not available - maps will be generated without basemap")
+
 warnings.filterwarnings('ignore')
 
 # ============================================================================
@@ -224,35 +231,51 @@ def plot_comparison(original_gdf, filtered_gdf, filter_title, output_path=None):
     plt.close()
 
 def plot_density_map(original_gdf, filtered_gdf, filter_title, output_path=None):
-    """Create geographic map comparison using geopandas."""
-    fig, axes = plt.subplots(1, 2, figsize=(18, 8))
+    """Create geographic map comparison with OSM basemap (if available) using geopandas."""
+    fig, axes = plt.subplots(1, 2, figsize=(20, 10))
     
-    # Project to geographic CRS for proper mapping
-    orig_4326 = original_gdf.to_crs('EPSG:4326')
-    filt_4326 = filtered_gdf.to_crs('EPSG:4326')
+    # Prepare data
+    if CONTEXTILY_AVAILABLE:
+        try:
+            orig_3857 = original_gdf.to_crs('EPSG:3857')
+            filt_3857 = filtered_gdf.to_crs('EPSG:3857')
+            add_basemap = True
+        except Exception as e:
+            print(f"✅ Error with basemap: {e}")
+            orig_3857 = original_gdf
+            filt_3857 = filtered_gdf
+            add_basemap = False
+    else:
+        orig_3857 = original_gdf
+        filt_3857 = filtered_gdf
+        add_basemap = False
     
-    # 1. Original data map
+    # 1. Original data map with basemap
     ax = axes[0]
-    orig_4326.plot(ax=ax, color='lightblue', markersize=1, alpha=0.4, edgecolor='none')
-    ax.set_title(f'All Data\n({len(orig_4326):,} points)', fontsize=12, fontweight='bold')
-    ax.grid(True, alpha=0.3, linestyle='--')
-    ax.set_xlabel('Longitude')
-    ax.set_ylabel('Latitude')
+    if add_basemap:
+        try:
+            ctx.add_basemap(ax, source=ctx.providers.OpenStreetMap.Mapnik, zoom=10, alpha=0.5)
+        except:
+            pass
+    orig_3857.plot(ax=ax, color='blue', markersize=8, alpha=0.5, edgecolor='darkblue', linewidth=0.2)
+    ax.set_title(f'All Data: {filter_title}\n({len(orig_3857):,} points)', fontsize=12, fontweight='bold')
     
-    # 2. Filtered data map (original as background, filtered highlighted)
+    # 2. Filtered data map with basemap
     ax = axes[1]
-    orig_4326.plot(ax=ax, color='lightgray', markersize=0.5, alpha=0.15, edgecolor='none', label='Other data')
+    if add_basemap:
+        try:
+            ctx.add_basemap(ax, source=ctx.providers.OpenStreetMap.Mapnik, zoom=10, alpha=0.5)
+        except:
+            pass
+    orig_3857.plot(ax=ax, color='lightgray', markersize=3, alpha=0.15, edgecolor='none', label='Other data')
     
-    if len(filt_4326) > 0:
-        filt_4326.plot(ax=ax, color='red', markersize=3, alpha=0.7, edgecolor='darkred', 
+    if len(filt_3857) > 0:
+        filt_3857.plot(ax=ax, color='red', markersize=10, alpha=0.7, edgecolor='darkred', 
                       linewidth=0.3, label=f'Filtered: {filter_title}')
     
-    ax.set_title(f'Filtered Data: {filter_title}\n({len(filt_4326):,} points, {len(filt_4326)/len(orig_4326)*100:.1f}%)', 
+    ax.set_title(f'Filtered Data: {filter_title}\n({len(filt_3857):,} points, {len(filt_3857)/len(orig_3857)*100:.1f}%)', 
                 fontsize=12, fontweight='bold', color='darkred')
-    ax.grid(True, alpha=0.3, linestyle='--')
-    ax.legend(loc='upper right', fontsize=10)
-    ax.set_xlabel('Longitude')
-    ax.set_ylabel('Latitude')
+    ax.legend(loc='upper right', fontsize=10, framealpha=0.9)
     
     plt.suptitle(f'Geographic Distribution: {filter_title}', fontsize=14, fontweight='bold', y=0.98)
     plt.tight_layout()

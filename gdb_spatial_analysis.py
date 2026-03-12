@@ -23,6 +23,14 @@ from shapely.geometry import LineString, Point
 from datetime import datetime, time
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+
+try:
+    import contextily as ctx
+    CONTEXTILY_AVAILABLE = True
+except ImportError:
+    CONTEXTILY_AVAILABLE = False
+    print("⚠ contextily not available - maps will be generated without basemap")
+
 from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
 import numpy as np
@@ -304,7 +312,7 @@ def extract_hour_from_timestamp(gdf, timestamp_column):
 
 def plot_user_trajectory(trajectory_gdf, user_name, title, output_path=None):
     """
-    Create a map showing a user's trajectory.
+    Create a map showing a user's trajectory with OSM basemap (if available).
     
     Parameters:
         trajectory_gdf (GeoDataFrame): GeoDataFrame with trajectory and points
@@ -312,43 +320,56 @@ def plot_user_trajectory(trajectory_gdf, user_name, title, output_path=None):
         title (str): Title for the plot
         output_path (str): Optional path to save the figure
     """
-    fig, ax = plt.subplots(figsize=(12, 10))
+    fig, ax = plt.subplots(figsize=(14, 11))
+    
+    # Try to add basemap if available
+    if CONTEXTILY_AVAILABLE:
+        try:
+            traj_3857 = trajectory_gdf.to_crs('EPSG:3857')
+            ctx.add_basemap(ax, source=ctx.providers.OpenStreetMap.Mapnik, zoom=10, alpha=0.5)
+        except Exception as e:
+            print(f"⚠ Error adding basemap: {e}")
+            traj_3857 = trajectory_gdf
+    else:
+        traj_3857 = trajectory_gdf
     
     # Plot trajectory line
-    if 'trajectory' in trajectory_gdf.columns:
-        trajectory_lines = trajectory_gdf[trajectory_gdf['geometry'].geom_type == 'LineString']
+    if 'trajectory' in traj_3857.columns:
+        trajectory_lines = traj_3857[traj_3857['geometry'].geom_type == 'LineString']
         if len(trajectory_lines) > 0:
-            trajectory_lines.plot(ax=ax, color='blue', linewidth=2, alpha=0.6, label='Trajectory')
+            trajectory_lines.plot(ax=ax, color='blue', linewidth=3, alpha=0.7, label='Trajectory')
     
     # Plot points with color gradient by hour
-    points = trajectory_gdf[trajectory_gdf['geometry'].geom_type == 'Point'].copy()
-    if 'hour' in points.columns:
+    points = traj_3857[traj_3857['geometry'].geom_type == 'Point'].copy()
+    if len(points) > 0 and 'hour' in points.columns:
         scatter = ax.scatter(
             points.geometry.x, 
             points.geometry.y,
             c=points['hour'],
             cmap='viridis',
-            s=50,
-            alpha=0.6,
+            s=80,
+            alpha=0.7,
             vmin=0,
             vmax=23,
+            edgecolor='black',
+            linewidth=0.5,
             label='Points (colored by hour)'
         )
-        cbar = plt.colorbar(scatter, ax=ax, label='Hour of Day')
-    else:
-        points.plot(ax=ax, color='green', markersize=50, alpha=0.6, label='Points')
+        cbar = plt.colorbar(scatter, ax=ax, label='Hour of Day', pad=0.02)
+    elif len(points) > 0:
+        points.plot(ax=ax, color='green', markersize=80, alpha=0.7, label='Points', edgecolor='black', linewidth=0.5)
     
     # Plot home location if available
     if 'home_location' in trajectory_gdf.columns:
         home = trajectory_gdf['home_location'].iloc[0]
-        if home is not None:
+        if home is not None and CONTEXTILY_AVAILABLE:
+            home_3857 = gpd.GeoSeries([home], crs='EPSG:3301').to_crs('EPSG:3857')
+            ax.plot(home_3857.geometry.x.values[0], home_3857.geometry.y.values[0], 'r*', markersize=25, label='Estimated Home', markeredgecolor='darkred', markeredgewidth=1)
+        elif home is not None:
             ax.plot(home.x, home.y, 'r*', markersize=20, label='Estimated Home')
     
-    ax.set_title(title, fontsize=14, fontweight='bold')
-    ax.set_xlabel('Longitude')
-    ax.set_ylabel('Latitude')
-    ax.grid(True, alpha=0.3)
-    ax.legend(loc='best')
+    ax.set_title(title, fontsize=14, fontweight='bold', pad=15)
+    ax.legend(loc='best', fontsize=10, framealpha=0.9)
     
     plt.tight_layout()
     
@@ -361,27 +382,38 @@ def plot_user_trajectory(trajectory_gdf, user_name, title, output_path=None):
 
 def plot_bts_and_boundaries(bts_gdf, boundaries_gdf, output_path=None):
     """
-    Create a map showing BTS locations and administrative boundaries.
+    Create a map showing BTS locations and administrative boundaries with OSM basemap.
     
     Parameters:
         bts_gdf (GeoDataFrame): BTS locations
         boundaries_gdf (GeoDataFrame): Administrative boundaries
         output_path (str): Optional path to save the figure
     """
-    fig, ax = plt.subplots(figsize=(12, 10))
+    fig, ax = plt.subplots(figsize=(14, 11))
+    
+    # Prepare data
+    if CONTEXTILY_AVAILABLE:
+        try:
+            bounds_3857 = boundaries_gdf.to_crs('EPSG:3857')
+            bts_3857 = bts_gdf.to_crs('EPSG:3857') if bts_gdf is not None else None
+            ctx.add_basemap(ax, source=ctx.providers.OpenStreetMap.Mapnik, zoom=10, alpha=0.5)
+        except Exception as e:
+            print(f"✅ Error adding basemap: {e}")
+            bounds_3857 = boundaries_gdf
+            bts_3857 = bts_gdf
+    else:
+        bounds_3857 = boundaries_gdf
+        bts_3857 = bts_gdf
     
     # Plot boundaries
-    boundaries_gdf.plot(ax=ax, color='lightgray', edgecolor='black', alpha=0.5, label='Administrative Boundaries')
+    bounds_3857.plot(ax=ax, color='none', edgecolor='black', linewidth=2, alpha=0.8, label='Administrative Boundaries')
     
     # Plot BTS locations
-    if bts_gdf is not None and len(bts_gdf) > 0:
-        bts_gdf.plot(ax=ax, color='red', marker='s', markersize=100, alpha=0.7, label='BTS Locations')
+    if bts_3857 is not None and len(bts_3857) > 0:
+        bts_3857.plot(ax=ax, color='red', marker='s', markersize=120, alpha=0.8, label='BTS Locations', edgecolor='darkred', linewidth=0.5)
     
-    ax.set_title('BTS Locations and Administrative Boundaries', fontsize=14, fontweight='bold')
-    ax.set_xlabel('Longitude')
-    ax.set_ylabel('Latitude')
-    ax.grid(True, alpha=0.3)
-    ax.legend(loc='best')
+    ax.set_title('BTS Locations and Administrative Boundaries', fontsize=14, fontweight='bold', pad=15)
+    ax.legend(loc='best', fontsize=10, framealpha=0.9)
     
     plt.tight_layout()
     
@@ -394,7 +426,7 @@ def plot_bts_and_boundaries(bts_gdf, boundaries_gdf, output_path=None):
 
 def plot_combined_trajectories(user_a_gdf, user_b_gdf, bts_gdf, boundaries_gdf, output_path=None):
     """
-    Create a combined map showing both user trajectories, BTS locations, and boundaries.
+    Create a combined map showing both user trajectories, BTS locations, and boundaries with OSM basemap.
     
     Parameters:
         user_a_gdf (GeoDataFrame): User A trajectory GeoDataFrame
@@ -403,42 +435,59 @@ def plot_combined_trajectories(user_a_gdf, user_b_gdf, bts_gdf, boundaries_gdf, 
         boundaries_gdf (GeoDataFrame): Administrative boundaries
         output_path (str): Optional path to save the figure
     """
-    fig, ax = plt.subplots(figsize=(14, 11))
+    fig, ax = plt.subplots(figsize=(16, 13))
+    
+    # Prepare data
+    if CONTEXTILY_AVAILABLE:
+        try:
+            user_a_3857 = user_a_gdf.to_crs('EPSG:3857')
+            user_b_3857 = user_b_gdf.to_crs('EPSG:3857')
+            bts_3857 = bts_gdf.to_crs('EPSG:3857') if bts_gdf is not None else None
+            bounds_3857 = boundaries_gdf.to_crs('EPSG:3857') if boundaries_gdf is not None else None
+            ctx.add_basemap(ax, source=ctx.providers.OpenStreetMap.Mapnik, zoom=9, alpha=0.4)
+        except Exception as e:
+            print(f"✅ Error with basemap: {e}")
+            user_a_3857 = user_a_gdf
+            user_b_3857 = user_b_gdf
+            bts_3857 = bts_gdf
+            bounds_3857 = boundaries_gdf
+    else:
+        user_a_3857 = user_a_gdf
+        user_b_3857 = user_b_gdf
+        bts_3857 = bts_gdf
+        bounds_3857 = boundaries_gdf
     
     # Plot boundaries
-    if boundaries_gdf is not None and len(boundaries_gdf) > 0:
-        boundaries_gdf.plot(ax=ax, color='lightgray', edgecolor='black', alpha=0.3)
+    if bounds_3857 is not None and len(bounds_3857) > 0:
+        bounds_3857.plot(ax=ax, color='none', edgecolor='gray', linewidth=1.5, alpha=0.6)
     
     # Plot User A trajectory
-    user_a_lines = user_a_gdf[user_a_gdf['geometry'].geom_type == 'LineString']
+    user_a_lines = user_a_3857[user_a_3857['geometry'].geom_type == 'LineString']
     if len(user_a_lines) > 0:
-        user_a_lines.plot(ax=ax, color='blue', linewidth=2, alpha=0.6, label='User A Trajectory')
+        user_a_lines.plot(ax=ax, color='blue', linewidth=2.5, alpha=0.7, label='User A Trajectory')
     
-    user_a_points = user_a_gdf[user_a_gdf['geometry'].geom_type == 'Point']
+    user_a_points = user_a_3857[user_a_3857['geometry'].geom_type == 'Point']
     if len(user_a_points) > 0:
         ax.scatter(user_a_points.geometry.x, user_a_points.geometry.y, 
-                  color='blue', s=20, alpha=0.4)
+                  color='blue', s=30, alpha=0.4, edgecolor='darkblue', linewidth=0.3)
     
     # Plot User B trajectory
-    user_b_lines = user_b_gdf[user_b_gdf['geometry'].geom_type == 'LineString']
+    user_b_lines = user_b_3857[user_b_3857['geometry'].geom_type == 'LineString']
     if len(user_b_lines) > 0:
-        user_b_lines.plot(ax=ax, color='green', linewidth=2, alpha=0.6, label='User B Trajectory')
+        user_b_lines.plot(ax=ax, color='green', linewidth=2.5, alpha=0.7, label='User B Trajectory')
     
-    user_b_points = user_b_gdf[user_b_gdf['geometry'].geom_type == 'Point']
+    user_b_points = user_b_3857[user_b_3857['geometry'].geom_type == 'Point']
     if len(user_b_points) > 0:
         ax.scatter(user_b_points.geometry.x, user_b_points.geometry.y, 
-                  color='green', s=20, alpha=0.4)
+                  color='green', s=30, alpha=0.4, edgecolor='darkgreen', linewidth=0.3)
     
     # Plot BTS locations
-    if bts_gdf is not None and len(bts_gdf) > 0:
-        bts_gdf.plot(ax=ax, color='red', marker='s', markersize=80, alpha=0.7, label='BTS Locations')
+    if bts_3857 is not None and len(bts_3857) > 0:
+        bts_3857.plot(ax=ax, color='red', marker='s', markersize=100, alpha=0.8, label='BTS Locations', edgecolor='darkred', linewidth=0.5)
     
     ax.set_title('Mobile User Trajectories, BTS Locations, and Administrative Boundaries', 
-                fontsize=14, fontweight='bold')
-    ax.set_xlabel('Longitude')
-    ax.set_ylabel('Latitude')
-    ax.grid(True, alpha=0.3)
-    ax.legend(loc='best', fontsize=10)
+                fontsize=15, fontweight='bold', pad=15)
+    ax.legend(loc='best', fontsize=11, framealpha=0.95)
     
     plt.tight_layout()
     

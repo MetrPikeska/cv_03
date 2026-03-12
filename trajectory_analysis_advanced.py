@@ -29,6 +29,13 @@ from scipy.stats import zscore
 from datetime import datetime, timedelta
 import seaborn as sns
 
+try:
+    import contextily as ctx
+    CONTEXTILY_AVAILABLE = True
+except ImportError:
+    CONTEXTILY_AVAILABLE = False
+    print("[!] contextily not available - maps will be generated without basemap")
+
 warnings.filterwarnings('ignore')
 
 # ============================================================================
@@ -54,10 +61,10 @@ def load_layer(gdb_path, layer_name):
     """Load a single layer from GDB."""
     try:
         gdf = gpd.read_file(gdb_path, layer=layer_name)
-        print(f"✓ Loaded '{layer_name}': {len(gdf)} features")
+        print(f"[+] Loaded '{layer_name}': {len(gdf)} features")
         return gdf
     except Exception as e:
-        print(f"✗ Failed to load '{layer_name}': {e}")
+        print(f"[-] Failed to load '{layer_name}': {e}")
         return None
 
 # ============================================================================
@@ -205,7 +212,7 @@ def generate_inactivity_summary(points_gdf, timestamp_col, user_name):
     print(f"\nInactivity by hour of day:")
     for hour in range(24):
         count = inactive_by_hour.get(hour, 0)
-        bar = '█' * (count // (max(inactive_by_hour.max() // 10, 1)) if len(inactive_by_hour) > 0 else 0)
+        bar = '#' * (count // (max(inactive_by_hour.max() // 10, 1)) if len(inactive_by_hour) > 0 else 0)
         print(f"  {hour:02d}:00 - {hour+1:02d}:00  {bar}  ({count} periods)")
     
     return {
@@ -396,7 +403,7 @@ def plot_daily_rhythm(points_gdf, user_name, output_path=None):
     
     if output_path:
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
-        print(f"✓ Saved: {output_path}")
+        print(f"[+] Saved: {output_path}")
     
     plt.close()
 
@@ -467,7 +474,7 @@ def plot_speed_distribution(points_gdf, user_name, output_path=None):
     
     if output_path:
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
-        print(f"✓ Saved: {output_path}")
+        print(f"[+] Saved: {output_path}")
     
     plt.close()
 
@@ -493,78 +500,92 @@ def plot_heatmap_hourly(points_gdf, user_name, output_path=None):
     
     if output_path:
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
-        print(f"✓ Saved: {output_path}")
+        print(f"[+] Saved: {output_path}")
     
     plt.close()
 
 def plot_inactivity_map(points_gdf, user_name, output_path=None):
-    """Map showing active vs. inactive locations."""
-    fig, ax = plt.subplots(figsize=(14, 10))
+    """Map showing active vs. inactive locations with OSM basemap (if available)."""
+    fig, ax = plt.subplots(figsize=(14, 11))
     
-    # Project to geographic CRS for plotting
-    gdf_4326 = points_gdf.to_crs('EPSG:4326')
+    # Prepare data
+    if CONTEXTILY_AVAILABLE:
+        try:
+            gdf_3857 = points_gdf.to_crs('EPSG:3857')
+            ctx.add_basemap(ax, source=ctx.providers.OpenStreetMap.Mapnik, zoom=10, alpha=0.5)
+        except Exception as e:
+            print(f"✅ Error adding basemap: {e}")
+            gdf_3857 = points_gdf
+    else:
+        gdf_3857 = points_gdf
     
-    # Active points
-    active = gdf_4326[~gdf_4326['is_inactive']]
-    inactive = gdf_4326[gdf_4326['is_inactive']]
+    # Active and inactive points
+    active = gdf_3857[~gdf_3857['is_inactive']]
+    inactive = gdf_3857[gdf_3857['is_inactive']]
     
     # Plot
     if len(active) > 0:
-        active.plot(ax=ax, color='blue', markersize=1, alpha=0.3, label=f'Active ({len(active)} points)')
+        active.plot(ax=ax, color='blue', markersize=15, alpha=0.5, edgecolor='darkblue', linewidth=0.3, label=f'Active ({len(active)} points)')
     
     if len(inactive) > 0:
-        inactive.plot(ax=ax, color='red', markersize=5, alpha=0.6, 
+        inactive.plot(ax=ax, color='red', markersize=25, alpha=0.7, 
                      edgecolor='darkred', linewidth=0.5, label=f'Inactive ({len(inactive)} points)')
     
-    ax.set_xlabel('Longitude')
-    ax.set_ylabel('Latitude')
-    ax.set_title(f'{user_name} - Inactivity Locations Map', fontsize=13, fontweight='bold')
-    ax.legend(loc='upper right', fontsize=11)
-    ax.grid(True, alpha=0.3)
+    ax.set_title(f'{user_name} - Inactivity Locations Map', fontsize=13, fontweight='bold', pad=15)
+    ax.legend(loc='upper right', fontsize=11, framealpha=0.9)
+    
+    plt.tight_layout()
     
     if output_path:
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
-        print(f"✓ Saved: {output_path}")
+        print(f"[+] Saved: {output_path}")
     
     plt.close()
 
 def plot_outlier_map(points_gdf, user_name, output_path=None):
-    """Map showing outlier locations with color by speed."""
-    fig, ax = plt.subplots(figsize=(14, 10))
+    """Map showing outlier locations with color by speed and OSM basemap (if available)."""
+    fig, ax = plt.subplots(figsize=(14, 11))
     
-    # Project to geographic CRS
-    gdf_4326 = points_gdf.to_crs('EPSG:4326')
+    # Prepare data
+    if CONTEXTILY_AVAILABLE:
+        try:
+            gdf_3857 = points_gdf.to_crs('EPSG:3857')
+            ctx.add_basemap(ax, source=ctx.providers.OpenStreetMap.Mapnik, zoom=10, alpha=0.5)
+        except Exception as e:
+            print(f"✅ Error adding basemap: {e}")
+            gdf_3857 = points_gdf
+    else:
+        gdf_3857 = points_gdf
     
-    # Normal points
-    normal = gdf_4326[~gdf_4326['is_outlier']]
-    outliers = gdf_4326[gdf_4326['is_outlier']]
+    # Normal and outlier points
+    normal = gdf_3857[~gdf_3857['is_outlier']]
+    outliers = gdf_3857[gdf_3857['is_outlier']]
     
     # Plot normal points as background
     if len(normal) > 0:
-        normal.plot(ax=ax, color='lightgray', markersize=2, alpha=0.2, label='Normal')
+        normal.plot(ax=ax, color='lightgray', markersize=8, alpha=0.2, label='Normal')
     
-    # Plot outliers colored by speed using column mapping
+    # Plot outliers colored by speed
     if len(outliers) > 0:
         outliers.plot(
             ax=ax,
             column='speed_kmh',
-            markersize=30,
+            markersize=50,
             cmap='RdYlGn_r',
-            alpha=0.7,
+            alpha=0.8,
             edgecolor='black',
             linewidth=0.5,
             legend=True,
-            legend_kwds={'label': 'Speed (km/h)', 'orientation': 'vertical', 'shrink': 0.8}
+            legend_kwds={'label': 'Speed (km/h)', 'orientation': 'vertical', 'shrink': 0.7, 'pad': 0.02}
         )
     
-    ax.set_xlabel('Longitude', fontsize=11)
-    ax.set_ylabel('Latitude', fontsize=11)
-    ax.set_title(f'{user_name} - Outlier Locations Map (colored by speed)', fontsize=13, fontweight='bold')
-    ax.grid(True, alpha=0.3, linestyle='--')
+    ax.set_title(f'{user_name} - Outlier Locations Map (colored by speed)', fontsize=13, fontweight='bold', pad=15)
+    
+    plt.tight_layout()
     
     if output_path:
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
-        print(f"✓ Saved: {output_path}")
+        print(f"[+] Saved: {output_path}")
     
     plt.close()
 
@@ -579,25 +600,25 @@ def create_statistics_tables(points_gdf, user_name, output_dir):
     hourly_stats = generate_hourly_statistics(points_gdf)
     hourly_path = os.path.join(output_dir, f'{user_name.lower()}_hourly_stats.csv')
     hourly_stats.to_csv(hourly_path)
-    print(f"✓ Saved hourly statistics: {hourly_path}")
+    print(f"[+] Saved hourly statistics: {hourly_path}")
     
     # Daily statistics
     daily_stats = generate_daily_statistics(points_gdf)
     daily_path = os.path.join(output_dir, f'{user_name.lower()}_daily_stats.csv')
     daily_stats.to_csv(daily_path)
-    print(f"✓ Saved daily statistics: {daily_path}")
+    print(f"[+] Saved daily statistics: {daily_path}")
     
     # Monthly statistics
     monthly_stats = generate_monthly_statistics(points_gdf)
     monthly_path = os.path.join(output_dir, f'{user_name.lower()}_monthly_stats.csv')
     monthly_stats.to_csv(monthly_path)
-    print(f"✓ Saved monthly statistics: {monthly_path}")
+    print(f"[+] Saved monthly statistics: {monthly_path}")
     
     # Inactivity periods
     inactive_periods = points_gdf[points_gdf['is_inactive']][['hour', 'weekday_name', 'distance_to_next_m', 'time_gap_hours']].copy()
     inactive_path = os.path.join(output_dir, f'{user_name.lower()}_inactivity_periods.csv')
     inactive_periods.to_csv(inactive_path, index=False)
-    print(f"✓ Saved inactivity periods: {inactive_path}")
+    print(f"[+] Saved inactivity periods: {inactive_path}")
     
     # Outlier points
     outlier_points = points_gdf[points_gdf['is_outlier']][
@@ -605,7 +626,7 @@ def create_statistics_tables(points_gdf, user_name, output_dir):
     ].copy()
     outlier_path = os.path.join(output_dir, f'{user_name.lower()}_outlier_points.csv')
     outlier_points.to_csv(outlier_path, index=False)
-    print(f"✓ Saved outlier points: {outlier_path}")
+    print(f"[+] Saved outlier points: {outlier_path}")
 
 # ============================================================================
 # MAIN ANALYSIS FUNCTION
@@ -625,18 +646,18 @@ def analyze_user_trajectory(gdb_path, layer_name, user_label):
     # Extract temporal features
     gdf = extract_temporal_features(gdf, 'pos_time')
     gdf = gdf.sort_values('pos_time')
-    print(f"✓ Extracted temporal features")
+    print(f"[+] Extracted temporal features")
     
     # Calculate motion metrics
     gdf = calculate_distances(gdf)
     gdf = calculate_time_gaps(gdf, 'pos_time')
     gdf = calculate_speed(gdf)
-    print(f"✓ Calculated motion metrics (distance, time gaps, speed)")
+    print(f"[+] Calculated motion metrics (distance, time gaps, speed)")
     
     # Detect patterns
     gdf = detect_inactivity_periods(gdf, 'pos_time', min_gap_hours=1)
     gdf = detect_outliers(gdf, speed_threshold_kmh=100, gap_threshold_hours=24)
-    print(f"✓ Detected inactivity periods and outliers")
+    print(f"[+] Detected inactivity periods and outliers")
     
     # Generate summaries
     generate_inactivity_summary(gdf, 'pos_time', user_label)
@@ -692,3 +713,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
