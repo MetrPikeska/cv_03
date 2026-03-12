@@ -1,0 +1,134 @@
+📋 PROJECT STRUCTURE - REORGANIZACE HOTOVA ✅
+════════════════════════════════════════════════════════════════════
+
+## 📁 NOVÝ LAYOUT REPOSITORY
+
+```
+CV_03/
+│
+├─📂 out/                              ← VŠECHNY VÝSTUPY ANALÝZ JSOU TADY!
+│  ├─ 📂 iter_01_basic_spatial/        (9 souborů)
+│  │  ├─ user_a_trajectory.png         • Mapa trajektorie User A
+│  │  ├─ user_b_trajectory.png         • Mapa trajektorie User B
+│  │  ├─ combined_analysis.png         • Kombinovaná vizualizace
+│  │  ├─ bts_and_boundaries.png        • Infrastruktura (BTS, hranice)
+│  │  ├─ user_a_trajectory.geojson     • Pro import do QGIS
+│  │  ├─ user_b_trajectory.geojson
+│  │  ├─ user_a_points.geojson
+│  │  ├─ user_b_points.geojson
+│  │  └─ home_locations.geojson
+│  │
+│  ├─ 📂 iter_02_advanced_temporal/    (16 souborů)
+│  │  ├─ user_a_daily_rhythm.png       • 5-panelová analýza denního rytmu
+│  │  ├─ user_a_speed_analysis.png     • Histogram, box plot, trendy
+│  │  ├─ user_a_heatmap.png            • Teplotní mapa (den × hodina)
+│  │  ├─ user_a_hourly_stats.csv       • Statistiky po hodinách (0-23)
+│  │  ├─ user_a_daily_stats.csv        • Statistiky po dnech
+│  │  ├─ user_a_monthly_stats.csv      • Statistiky po měsících
+│  │  ├─ user_a_inactivity_periods.csv • 1,683 period nečinnosti
+│  │  ├─ user_a_outlier_points.csv     • 651 anomálií (>100km/h)
+│  │  └─ [stejné pro user_b]           (8 souborů)
+│  │
+│  ├─ 📂 iter_03_interactive_filtering/ (8 souborů)
+│  │  ├─ user_a_summer.png             • Filtr: Léto (červen-srpen)
+│  │  ├─ user_a_working_hours.png      • Filtr: Pracovní doba (9-17)
+│  │  ├─ user_a_weekends.png           • Filtr: Víkendy
+│  │  ├─ user_a_night.png              • Filtr: Noc (21-06)
+│  │  └─ [stejné pro user_b]           (4 soubory)
+│  │
+│  └─ 📄 README.md                      • Dokumentace struktury
+│
+├─ 📄 gdb_spatial_analysis.py           ← AKTUALIZOVÁN ✓
+│  │  OUTPUT_DIR = "out/iter_01_basic_spatial"
+│
+├─ 📄 trajectory_analysis_advanced.py   ← AKTUALIZOVÁN ✓
+│  │  OUTPUT_DIR = "out/iter_02_advanced_temporal"
+│
+├─ 📄 filtering_tool.py                 ← AKTUALIZOVÁN ✓
+│  │  OUTPUT_DIR = "out/iter_03_interactive_filtering"
+│
+├─ 📄 REPOSITORY_STRUCTURE.md           ← NOVÝ: Přehled změn
+├─ 📄 README.md
+├─ 📄 config.py
+├─ 📄 requirements.txt
+└─ 📂 cvic04.gdb                        ← Zdrojová data
+```
+
+════════════════════════════════════════════════════════════════════
+
+## ✅ CO SE ZMĚNILO
+
+### PŘED (CHAOS)
+```
+analysis_results/          (neorganizované)
+analysis_advanced/         (neorganizované)
+analysis_filtered/         (neorganizované)
+```
+
+### TEĎASI (ORGANIZOVANĚ)
+```
+out/iter_01_*/
+   /iter_02_*/
+   /iter_03_*/
+```
+
+════════════════════════════════════════════════════════════════════
+
+## 🚀 JAK SPUSTIT
+
+### Jeden Skript
+```bash
+python gdb_spatial_analysis.py
+# → výstupy do out/iter_01_basic_spatial/
+```
+
+### Všechny Skripty Postupně
+```bash
+python gdb_spatial_analysis.py
+python trajectory_analysis_advanced.py
+python filtering_tool.py
+# → kompletní analýza se vygeneruje do out/
+```
+
+### Přidání Nové Iterace (Fáze 4+)
+```
+mkdir out/iter_04_moje_analyza
+# Vytvoř nový skript s: OUTPUT_DIR = "out/iter_04_moje_analyza"
+python muj_skript.py
+```
+
+════════════════════════════════════════════════════════════════════
+
+## 📊 STATISTIKA ITERACÍ
+
+| Iterace | Název | Souborů | Fokus |
+|---------|-------|---------|-------|
+| 01 | Basic Spatial | 9 | Mapy, trajektorie, domova |
+| 02 | Advanced Temporal | 16 | Denní rytmy, anomálie, statistiky |
+| 03 | Filtering | 8 | Sezónní, časový, srovnávací |
+| **Σ** | **Celkem** | **33** | **Komplexní analýza** |
+
+════════════════════════════════════════════════════════════════════
+
+## 🎯 VÝHODY NOVÉ STRUKTURY
+
+✓ **Struktura** - Jedno místo pro všechny výstupy (out/)
+✓ **Verzování** - Snadné porovnání mezi iteracemi  
+✓ **Čitelnost** - Jasné pojmenování (iter_XX_popis)
+✓ **Rozšiřitelnost** - Lehké přidávání iter_04, iter_05...
+✓ **Údržba** - Staré adresáře byly vyčištěny
+
+════════════════════════════════════════════════════════════════════
+
+## 📝 STAVY MIGRACE
+
+✅ Adresářová struktura vytvořena (3 iterace)
+✅ Soubory zkopírovány (33 souborů)
+✅ Skripty aktualizovány (3 Python soubory)
+✅ Staré složky smazány (analysis_results, analysis_advanced, analysis_filtered)
+✅ Dokumentace vytvořena (README.md, REPOSITORY_STRUCTURE.md)
+✅ Testování - gdb_spatial_analysis.py spuštěn s novým umístěním ✓
+
+════════════════════════════════════════════════════════════════════
+Status: HOTOVO (12.03.2026)
+════════════════════════════════════════════════════════════════════

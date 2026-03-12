@@ -497,6 +497,80 @@ def plot_heatmap_hourly(points_gdf, user_name, output_path=None):
     
     plt.close()
 
+def plot_inactivity_map(points_gdf, user_name, output_path=None):
+    """Map showing active vs. inactive locations."""
+    fig, ax = plt.subplots(figsize=(14, 10))
+    
+    # Project to geographic CRS for plotting
+    gdf_4326 = points_gdf.to_crs('EPSG:4326')
+    
+    # Active points
+    active = gdf_4326[~gdf_4326['is_inactive']]
+    inactive = gdf_4326[gdf_4326['is_inactive']]
+    
+    # Plot
+    if len(active) > 0:
+        active.plot(ax=ax, color='blue', markersize=1, alpha=0.3, label=f'Active ({len(active)} points)')
+    
+    if len(inactive) > 0:
+        inactive.plot(ax=ax, color='red', markersize=5, alpha=0.6, 
+                     edgecolor='darkred', linewidth=0.5, label=f'Inactive ({len(inactive)} points)')
+    
+    ax.set_xlabel('Longitude')
+    ax.set_ylabel('Latitude')
+    ax.set_title(f'{user_name} - Inactivity Locations Map', fontsize=13, fontweight='bold')
+    ax.legend(loc='upper right', fontsize=11)
+    ax.grid(True, alpha=0.3)
+    
+    if output_path:
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        print(f"✓ Saved: {output_path}")
+    
+    plt.close()
+
+def plot_outlier_map(points_gdf, user_name, output_path=None):
+    """Map showing outlier locations with color by speed."""
+    fig, ax = plt.subplots(figsize=(14, 10))
+    
+    # Project to geographic CRS
+    gdf_4326 = points_gdf.to_crs('EPSG:4326')
+    
+    # Normal points
+    normal = gdf_4326[~gdf_4326['is_outlier']]
+    outliers = gdf_4326[gdf_4326['is_outlier']]
+    
+    # Plot normal points
+    if len(normal) > 0:
+        normal.plot(ax=ax, color='lightgray', markersize=2, alpha=0.2, label='Normal')
+    
+    # Plot outliers colored by speed
+    if len(outliers) > 0:
+        scatter = ax.scatter(
+            outliers.geometry.x,
+            outliers.geometry.y,
+            c=outliers['speed_kmh'].fillna(0),
+            s=30,
+            cmap='RdYlGn_r',
+            alpha=0.7,
+            edgecolors='black',
+            linewidth=0.5,
+            label='Outliers (by speed)'
+        )
+        cbar = plt.colorbar(scatter, ax=ax)
+        cbar.set_label('Speed (km/h)', fontsize=11)
+    
+    ax.set_xlabel('Longitude')
+    ax.set_ylabel('Latitude')
+    ax.set_title(f'{user_name} - Outlier Locations Map (colored by speed)', fontsize=13, fontweight='bold')
+    ax.legend(loc='upper right', fontsize=11)
+    ax.grid(True, alpha=0.3)
+    
+    if output_path:
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        print(f"✓ Saved: {output_path}")
+    
+    plt.close()
+
 # ============================================================================
 # STATISTICS TABLE GENERATION
 # ============================================================================
@@ -579,6 +653,12 @@ def analyze_user_trajectory(gdb_path, layer_name, user_label):
                            os.path.join(OUTPUT_DIR, f'{user_label.lower()}_speed_analysis.png'))
     plot_heatmap_hourly(gdf, user_label,
                        os.path.join(OUTPUT_DIR, f'{user_label.lower()}_heatmap.png'))
+    
+    # Map visualizations
+    plot_inactivity_map(gdf, user_label,
+                       os.path.join(OUTPUT_DIR, f'{user_label.lower()}_inactivity_map.png'))
+    plot_outlier_map(gdf, user_label,
+                    os.path.join(OUTPUT_DIR, f'{user_label.lower()}_outlier_map.png'))
     
     # Create statistics tables
     print(f"\nGenerating statistics tables...")
