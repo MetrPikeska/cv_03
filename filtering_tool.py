@@ -224,37 +224,37 @@ def plot_comparison(original_gdf, filtered_gdf, filter_title, output_path=None):
     plt.close()
 
 def plot_density_map(original_gdf, filtered_gdf, filter_title, output_path=None):
-    """Create density heatmap of filtered data."""
-    fig, axes = plt.subplots(1, 2, figsize=(16, 7))
+    """Create geographic map comparison using geopandas."""
+    fig, axes = plt.subplots(1, 2, figsize=(18, 8))
     
-    # Project to geographic CRS
+    # Project to geographic CRS for proper mapping
     orig_4326 = original_gdf.to_crs('EPSG:4326')
     filt_4326 = filtered_gdf.to_crs('EPSG:4326')
     
-    # 1. Original density
+    # 1. Original data map
     ax = axes[0]
-    orig_4326.plot(ax=ax, color='blue', markersize=0.5, alpha=0.3)
-    ax.set_title('Original Data Density', fontsize=12, fontweight='bold')
+    orig_4326.plot(ax=ax, color='lightblue', markersize=1, alpha=0.4, edgecolor='none')
+    ax.set_title(f'All Data\n({len(orig_4326):,} points)', fontsize=12, fontweight='bold')
+    ax.grid(True, alpha=0.3, linestyle='--')
     ax.set_xlabel('Longitude')
     ax.set_ylabel('Latitude')
-    ax.grid(True, alpha=0.3)
     
-    # 2. Filtered density (colored)
+    # 2. Filtered data map (original as background, filtered highlighted)
     ax = axes[1]
-    orig_4326.plot(ax=ax, color='lightgray', markersize=0.5, alpha=0.1)
+    orig_4326.plot(ax=ax, color='lightgray', markersize=0.5, alpha=0.15, edgecolor='none', label='Other data')
     
-    # Plot filtered with color gradient
     if len(filt_4326) > 0:
-        scatter = ax.scatter(filt_4326.geometry.x, filt_4326.geometry.y,
-                           c='red', s=5, alpha=0.6, edgecolors='none')
+        filt_4326.plot(ax=ax, color='red', markersize=3, alpha=0.7, edgecolor='darkred', 
+                      linewidth=0.3, label=f'Filtered: {filter_title}')
     
-    ax.set_title(f'Filtered Data: {filter_title} ({len(filt_4326)} points)', 
-                fontsize=12, fontweight='bold')
+    ax.set_title(f'Filtered Data: {filter_title}\n({len(filt_4326):,} points, {len(filt_4326)/len(orig_4326)*100:.1f}%)', 
+                fontsize=12, fontweight='bold', color='darkred')
+    ax.grid(True, alpha=0.3, linestyle='--')
+    ax.legend(loc='upper right', fontsize=10)
     ax.set_xlabel('Longitude')
     ax.set_ylabel('Latitude')
-    ax.grid(True, alpha=0.3)
     
-    plt.suptitle(f'Spatial Distribution: {filter_title}', fontsize=13, fontweight='bold')
+    plt.suptitle(f'Geographic Distribution: {filter_title}', fontsize=14, fontweight='bold', y=0.98)
     plt.tight_layout()
     
     if output_path:
@@ -348,6 +348,8 @@ def run_example_analyses():
     print(f"   Points: {stats['Total Points']} ({stats['Total Points']/len(user_b)*100:.1f}% of year)")
     plot_comparison(user_b, summer_ub, "User B - Summer (Jun-Aug)",
                    f"{OUTPUT_DIR}/user_b_summer.png")
+    plot_density_map(user_b, summer_ub, "User B Summer",
+                    f"{OUTPUT_DIR}/user_b_summer_density.png")
     
     # Example 2: Working hours
     print("\n2. Working Hours Analysis (9:00-17:00)...")
@@ -357,6 +359,8 @@ def run_example_analyses():
     print(f"   Points: {stats['Total Points']} ({stats['Total Points']/len(user_b)*100:.1f}% of year)")
     plot_comparison(user_b, work_ub, "User B - Working Hours (9-17)",
                    f"{OUTPUT_DIR}/user_b_working_hours.png")
+    plot_density_map(user_b, work_ub, "User B Working Hours",
+                    f"{OUTPUT_DIR}/user_b_working_hours_density.png")
     
     # Example 3: Weekends
     print("\n3. Weekend Analysis (Saturdays & Sundays)...")
@@ -366,6 +370,8 @@ def run_example_analyses():
     print(f"   Points: {stats['Total Points']} ({stats['Total Points']/len(user_b)*100:.1f}% of year)")
     plot_comparison(user_b, weekend_ub, "User B - Weekends",
                    f"{OUTPUT_DIR}/user_b_weekends.png")
+    plot_density_map(user_b, weekend_ub, "User B Weekends",
+                    f"{OUTPUT_DIR}/user_b_weekends_density.png")
     
     # Example 4: Evening/Night (User B specific)
     print("\n4. Night Analysis (21:00-06:00) - User B more active here...")
@@ -375,6 +381,8 @@ def run_example_analyses():
     print(f"   Points: {stats['Total Points']} ({stats['Total Points']/len(user_b)*100:.1f}% of year)")
     plot_comparison(user_b, night_ub, "User B - Night (21-06)",
                    f"{OUTPUT_DIR}/user_b_night.png")
+    plot_density_map(user_b, night_ub, "User B Night",
+                    f"{OUTPUT_DIR}/user_b_night_density.png")
     
     # Comparison: Weekdays only
     print("\n\n" + "-"*70)

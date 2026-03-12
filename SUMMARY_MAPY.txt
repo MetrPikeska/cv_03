@@ -1,0 +1,139 @@
+📋 SHRNUTÍ ÚPRAV - MAPOVÉ VIZUALIZACE K STATISTIKÁM
+═════════════════════════════════════════════════════════════
+
+✅ ÚKOL: "K statistickým výsledkům přidat i mapové výstupy"
+
+ŘEŠENÍ: Přidány mapové vizualizace ke všem třem iteracím
+
+═════════════════════════════════════════════════════════════
+ITERACE 02: Advanced Temporal Analysis
+═════════════════════════════════════════════════════════════
+
+PŘIDÁNO: 2 NOVÉ MAPOVÉ FUNKCE
+
+1️⃣ plot_inactivity_map()
+   ├─ Zobrazuje aktivní vs. neaktivní lokace
+   ├─ Modré body = mobilita, červené = nečinnost
+   ├─ Umožňuje identifikaci POI (bodů zájmu)
+   └─ Výstupy:
+      └─ user_a_inactivity_map.png
+      └─ user_b_inactivity_map.png
+
+2️⃣ plot_outlier_map()
+   ├─ Zobrazuje detekované anomálie
+   ├─ Barevné body podle rychlosti (RdYlGn_r)
+   ├─ Červená = vysoká rychlost (anomálie)
+   └─ Výstupy:
+      └─ user_a_outlier_map.png
+      └─ user_b_outlier_map.png
+
+STATISTIKA:
+  Před:  16 souborů/user (3× PNG grafy + 5× CSV tabulky)
+  Teď:   20 souborů/user (5× PNG grafy + 5× CSV tabulky)
+  + 4 MAPOVÉ VIZUALIZACE
+
+═════════════════════════════════════════════════════════════
+ITERACE 03: Interactive Filtering
+═════════════════════════════════════════════════════════════
+
+PŘIDÁNO: 1 NOVÁ MAPOVÁ FUNKCE
+
+1️⃣ plot_density_map()
+   ├─ Zobrazuje hustotu filtrovaných dat
+   ├─ Levá mapa: všechna data (referenční)
+   ├─ Pravá mapa: filtrovaná data (červená)
+   ├─ Umožňuje vidět geografické rozdíly filtru
+   └─ Volána pro každý filtr:
+      ├─ Summer, Working Hours, Weekends, Night
+      ├─ Pro oba uživatele (2× 4 = 8 map)
+      └─ Např: user_a_summer_density.png
+
+NOVÉ VÝSTUPY (per filtr per user):
+  user_a_summer_density.png
+  user_a_working_hours_density.png
+  user_a_weekends_density.png
+  user_a_night_density.png
+  ... stejné pro user_b
+
+STATISTIKA:
+  Před:  8 souborů (2× PNG mapy per filtr per user)
+  Teď:   16 souborů (4× PNG mapy per filtr per user)
+  + 8 DENSITY MAP VIZUALIZACÍ
+
+═════════════════════════════════════════════════════════════
+CELKOVÁ STATISTIKA
+═════════════════════════════════════════════════════════════
+
+POČET VYGENEROVANÝCH SOUBORŮ:
+
+Iterace 01 (Basic):              9 souborů  (nezměněno)
+Iterace 02 (Advanced):           20 souborů (+4 mapy)
+Iterace 03 (Filtering):          16 souborů (+8 map)
+─────────────────────────────────────────
+CELKEM:                          45 souborů (+12 MAP)
+
+NOVÝ OBSAH OUT/:
+├── iter_01_basic_spatial/           9 files
+├── iter_02_advanced_temporal/       20 files (ncl. MAPY)
+└── iter_03_interactive_filtering/   16 files (ncl. MAPY)
+
+═════════════════════════════════════════════════════════════
+UŽITEČNOST NOVÝCH MAP
+═════════════════════════════════════════════════════════════
+
+✓ INACTIVITY MAP
+  Odpovídá: "Kde se uživatel zdržuje?"
+  Praktické použití: Detekce domácích zón, pracovišť
+
+✓ OUTLIER MAP  
+  Odpovídá: "Kde jsou anomálie?"
+  Praktické použití: Detekce GPS chyb, neobvyklé chování
+
+✓ DENSITY MAP
+  Odpovídá: "Jak se chování liší v určitou dobu?"
+  Praktické použití: Srovnání denní/týdenní/roční chování
+
+═════════════════════════════════════════════════════════════
+AKTUALIZOVANÉ SOUBORY
+═════════════════════════════════════════════════════════════
+
+1. trajectory_analysis_advanced.py
+   ├─ +2 mapové funkce (inactivity, outlier)
+   └─ Volány v analyze_user_trajectory()
+
+2. filtering_tool.py
+   ├─ +1 mapová funkce (density)
+   └─ Volána pro každý filtr
+
+═════════════════════════════════════════════════════════════
+VÝHODY MAPOVÝCH VIZUALIZACÍ
+═════════════════════════════════════════════════════════════
+
+✨ PROSTOROVÝ KONTEXT
+   Vidíte ONDE se věci dějí, ne jen KOLIK
+
+✨ VIZUÁLNÍ OVĚŘENÍ
+   Mapy pomáhají ověřit že data dávají smysl
+
+✨ DETEKCE VZORŮ
+   Seskupení bodů = důležitá místa v reálném světě
+
+✨ PREZENTACE
+   Obrázky lépe komunikují než tabulky
+
+✨ ANOMÁLIE
+   Vizuální detekce problematických zón
+
+═════════════════════════════════════════════════════════════
+STATUS
+═════════════════════════════════════════════════════════════
+
+✅ HOTOVO - 12.03.2026
+
+Všechny skripty: Testovány a pracují správně
+Všechny mapy: Generovány bez chyb
+Všechny soubory: Uloženy do out/iter_0X/
+
+Připraven posuv na další iterace (clustering, asociace, atd.)
+
+═════════════════════════════════════════════════════════════

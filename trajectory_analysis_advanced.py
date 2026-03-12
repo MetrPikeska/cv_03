@@ -539,31 +539,28 @@ def plot_outlier_map(points_gdf, user_name, output_path=None):
     normal = gdf_4326[~gdf_4326['is_outlier']]
     outliers = gdf_4326[gdf_4326['is_outlier']]
     
-    # Plot normal points
+    # Plot normal points as background
     if len(normal) > 0:
         normal.plot(ax=ax, color='lightgray', markersize=2, alpha=0.2, label='Normal')
     
-    # Plot outliers colored by speed
+    # Plot outliers colored by speed using column mapping
     if len(outliers) > 0:
-        scatter = ax.scatter(
-            outliers.geometry.x,
-            outliers.geometry.y,
-            c=outliers['speed_kmh'].fillna(0),
-            s=30,
+        outliers.plot(
+            ax=ax,
+            column='speed_kmh',
+            markersize=30,
             cmap='RdYlGn_r',
             alpha=0.7,
-            edgecolors='black',
+            edgecolor='black',
             linewidth=0.5,
-            label='Outliers (by speed)'
+            legend=True,
+            legend_kwds={'label': 'Speed (km/h)', 'orientation': 'vertical', 'shrink': 0.8}
         )
-        cbar = plt.colorbar(scatter, ax=ax)
-        cbar.set_label('Speed (km/h)', fontsize=11)
     
-    ax.set_xlabel('Longitude')
-    ax.set_ylabel('Latitude')
+    ax.set_xlabel('Longitude', fontsize=11)
+    ax.set_ylabel('Latitude', fontsize=11)
     ax.set_title(f'{user_name} - Outlier Locations Map (colored by speed)', fontsize=13, fontweight='bold')
-    ax.legend(loc='upper right', fontsize=11)
-    ax.grid(True, alpha=0.3)
+    ax.grid(True, alpha=0.3, linestyle='--')
     
     if output_path:
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
